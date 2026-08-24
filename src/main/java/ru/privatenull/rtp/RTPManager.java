@@ -1,7 +1,5 @@
 package ru.privatenull.rtp;
 
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.World;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -15,6 +13,7 @@ import ru.privatenull.pnrtpPlugin;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Random;
 import java.util.UUID;
 
@@ -127,56 +126,61 @@ public class RTPManager {
         // Запоминаем стартовую позицию для эффекта
         Location startLocation = player.getLocation().clone();
 
-        // Асинхронный поиск локации
+        // Работа с блоками и чанками должна выполняться на серверном потоке.
+        // Проверяем по одной позиции за тик, чтобы не создавать длинную задержку.
         new BukkitRunnable() {
+            private static final int MAX_ATTEMPTS = 1000;
+            private int attempts;
+
             @Override
             public void run() {
-                Location safeLocation = findSafeLocation(finalOrigin, mode);
-
-                if (safeLocation == null) {
-                    new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            plugin.sendMessage(player, "no-safe-location");
-                        }
-                    }.runTask(plugin);
+                if (!player.isOnline()) {
+                    cancel();
                     return;
                 }
 
-                // Меняем кд
-                setCooldown(player, mode);
+                Location safeLocation = findSafeLocation(finalOrigin, mode, 1);
+                attempts++;
 
-                // Телепортируем игрока
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        // Эффект на старте
-                        playStartEffects(startLocation);
-
-                        safeLocation.getChunk().load();
-                        player.teleportAsync(safeLocation).thenAccept(success -> {
-                            if (success) {
-                                plugin.sendMessage(player, "teleport-success", 
-                                    "%x%", String.valueOf(safeLocation.getBlockX()), 
-                                    "%y%", String.valueOf(safeLocation.getBlockY()), 
-                                    "%z%", String.valueOf(safeLocation.getBlockZ()));
-                                plugin.sendTitle(player);
-
-                                // Эффект на финише (с небольшой задержкой)
-                                new BukkitRunnable() {
-                                    @Override
-                                    public void run() {
-                                        playEndEffects(player.getLocation());
-                                    }
-                                }.runTaskLater(plugin, 3L);
-                            } else {
-                                plugin.sendMessage(player, "error");
-                            }
-                        });
+                if (safeLocation == null) {
+                    if (attempts >= MAX_ATTEMPTS) {
+                        cancel();
+                        plugin.sendMessage(player, "no-safe-location");
                     }
-                }.runTask(plugin);
+                    return;
+                }
+
+                cancel();
+                completeTeleport(player, mode, startLocation, safeLocation);
             }
-        }.runTaskAsynchronously(plugin);
+        }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private void completeTeleport(Player player, String mode, Location startLocation, Location safeLocation) {
+        playStartEffects(startLocation);
+
+        safeLocation.getChunk().load();
+        boolean success = player.teleport(safeLocation);
+        if (!success) {
+            plugin.sendMessage(player, "error");
+            return;
+        }
+
+        setCooldown(player, mode);
+        plugin.sendMessage(player, "teleport-success",
+            "%x%", String.valueOf(safeLocation.getBlockX()),
+            "%y%", String.valueOf(safeLocation.getBlockY()),
+            "%z%", String.valueOf(safeLocation.getBlockZ()));
+        plugin.sendTitle(player);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (player.isOnline()) {
+                    playEndEffects(player.getLocation());
+                }
+            }
+        }.runTaskLater(plugin, 3L);
     }
 
     private void playStartEffects(Location location) {
@@ -188,20 +192,16 @@ public class RTPManager {
         try {
             String particleName = plugin.getConfig().getString("effects.start.particle", "PORTAL");
             int count = plugin.getConfig().getInt("effects.start.count", 50);
-            Particle particle = Registry.PARTICLE_TYPE.get(NamespacedKey.minecraft(particleName.toLowerCase()));
-            if (particle != null) {
-                world.spawnParticle(particle, location.add(0, 1, 0), count, 0.5, 1.0, 0.5, 0.1);
-            }
+            Particle particle = Particle.valueOf(particleName.toUpperCase(Locale.ROOT));
+            world.spawnParticle(particle, location.add(0, 1, 0), count, 0.5, 1.0, 0.5, 0.1);
         } catch (Exception ignored) {}
 
         try {
             String soundName = plugin.getConfig().getString("effects.start.sound", "ENTITY_ENDERMAN_TELEPORT");
             float volume = (float) plugin.getConfig().getDouble("effects.start.sound-volume", 1.0);
             float pitch = (float) plugin.getConfig().getDouble("effects.start.sound-pitch", 1.2);
-            Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundName.toLowerCase()));
-            if (sound != null) {
-                world.playSound(location, sound, volume, pitch);
-            }
+            Sound sound = Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
+            world.playSound(location, sound, volume, pitch);
         } catch (Exception ignored) {}
     }
 
@@ -214,26 +214,21 @@ public class RTPManager {
         try {
             String particleName = plugin.getConfig().getString("effects.end.particle", "END_ROD");
             int count = plugin.getConfig().getInt("effects.end.count", 80);
-            Particle particle = Registry.PARTICLE_TYPE.get(NamespacedKey.minecraft(particleName.toLowerCase()));
-            if (particle != null) {
-                world.spawnParticle(particle, location.add(0, 1, 0), count, 0.5, 1.0, 0.5, 0.05);
-            }
+            Particle particle = Particle.valueOf(particleName.toUpperCase(Locale.ROOT));
+            world.spawnParticle(particle, location.add(0, 1, 0), count, 0.5, 1.0, 0.5, 0.05);
         } catch (Exception ignored) {}
 
         try {
             String soundName = plugin.getConfig().getString("effects.end.sound", "ENTITY_PLAYER_LEVELUP");
             float volume = (float) plugin.getConfig().getDouble("effects.end.sound-volume", 0.8);
             float pitch = (float) plugin.getConfig().getDouble("effects.end.sound-pitch", 1.5);
-            Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundName.toLowerCase()));
-            if (sound != null) {
-                world.playSound(location, sound, volume, pitch);
-            }
+            Sound sound = Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
+            world.playSound(location, sound, volume, pitch);
         } catch (Exception ignored) {}
     }
 
-    private Location findSafeLocation(Location origin, String mode) {
+    private Location findSafeLocation(Location origin, String mode, int maxAttempts) {
         int radius = plugin.getRadius(mode);
-        int maxAttempts = 1000;
         World world = origin.getWorld();
 
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
@@ -255,7 +250,7 @@ public class RTPManager {
 
     private Location findHighestSafeY(World world, double x, double z) {
         int maxY = world.getMaxHeight();
-        int minY = world.getMinHeight();
+        int minY = getMinWorldHeight(world);
 
         // Начинаем с максимальной высоты и спускаемся вниз
         for (int y = maxY - 1; y > minY; y--) {
@@ -270,6 +265,15 @@ public class RTPManager {
         }
 
         return null;
+    }
+
+    private int getMinWorldHeight(World world) {
+        try {
+            Object value = world.getClass().getMethod("getMinHeight").invoke(world);
+            return ((Number) value).intValue();
+        } catch (ReflectiveOperationException | ClassCastException ignored) {
+            return 0;
+        }
     }
 
     private boolean isLocationSafe(Location location) {

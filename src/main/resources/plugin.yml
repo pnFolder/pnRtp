@@ -1,7 +1,7 @@
 name: pnRtp
 version: '${version}'
 main: ru.privatenull.pnrtpPlugin
-api-version: '1.21'
+api-version: '1.16'
 author: privatenull
 commands:
   rtp:

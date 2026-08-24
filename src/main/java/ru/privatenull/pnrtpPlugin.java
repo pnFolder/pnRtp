@@ -6,10 +6,6 @@ import ru.privatenull.rtp.RTPListener;
 import ru.privatenull.rtp.RTPManager;
 import ru.privatenull.rtp.RTPTabCompleter;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,14 +50,12 @@ public final class pnrtpPlugin extends JavaPlugin {
         
         if (getConfig().isList("messages." + path)) {
             for (String line : getConfig().getStringList("messages." + path)) {
-                Component component = colorize(prefix + applyReplacements(line, replacements));
-                sender.sendMessage(component);
+                sender.sendMessage(colorize(prefix + applyReplacements(line, replacements)));
             }
         } else {
             String msg = getConfig().getString("messages." + path);
             if (msg != null && !msg.isEmpty()) {
-                Component component = colorize(prefix + applyReplacements(msg, replacements));
-                sender.sendMessage(component);
+                sender.sendMessage(colorize(prefix + applyReplacements(msg, replacements)));
             }
         }
     }
@@ -83,10 +77,10 @@ public final class pnrtpPlugin extends JavaPlugin {
      * 3. &c, &a, &l и т.д. - стандартные цветовые коды
      * 4. <#RRGGBB> - MiniMessage-like hex
      * 
-     * Возвращает Component для Adventure API
+     * Возвращает legacy-строку, совместимую с Paper 1.16.5 и новее.
      */
-    public Component colorize(String message) {
-        if (message == null) return Component.empty();
+    public String colorize(String message) {
+        if (message == null) return "";
         
         // 1) Конвертируем &#RRGGBB -> §x§R§R§G§G§B§B
         Matcher hexMatcher = HEX_PATTERN.matcher(message);
@@ -130,8 +124,7 @@ public final class pnrtpPlugin extends JavaPlugin {
         // 4) Конвертируем обычные &коды -> §коды
         message = message.replace("&", "§");
         
-        // Десериализуем через Legacy serializer с поддержкой hex
-        return LegacyComponentSerializer.legacySection().deserialize(message);
+        return message;
     }
 
     /**
