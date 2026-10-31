@@ -3,6 +3,8 @@ version: '${version}'
 main: ru.privatenull.pnrtpPlugin
 api-version: '1.16'
 author: privatenull
+website: https://github.com/pnFolder/pnRtp
+softdepend: [pnLibrary]
 commands:
   rtp:
     description: Случайная телепортация

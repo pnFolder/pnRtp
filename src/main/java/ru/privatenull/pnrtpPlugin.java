@@ -6,6 +6,11 @@ import ru.privatenull.rtp.RTPListener;
 import ru.privatenull.rtp.RTPManager;
 import ru.privatenull.rtp.RTPTabCompleter;
 
+import org.pnfolder.pnlibrary.bukkit.bootstrap.PnLibraryBootstrap;
+import ru.privatenull.bootstrap.PnLibraryLifecycleListener;
+import ru.privatenull.integration.PnLibraryRuntime;
+
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,9 +24,38 @@ public final class pnrtpPlugin extends JavaPlugin {
     private static final Pattern LEGACY_HEX_PATTERN = Pattern.compile("&x(&[A-Fa-f0-9]){6}");
 
     private RTPManager rtpManager;
+    private boolean pnLibraryReady;
+    private PnLibraryRuntime pnRuntime;
+
+    @Override
+    public void onLoad() {
+        try {
+            pnLibraryReady = PnLibraryBootstrap.ensureInstalled(this, PnLibraryRuntime.MINIMUM_VERSION);
+        } catch (Throwable failure) {
+            getLogger().log(Level.SEVERE,
+                    "Не удалось автоматически подготовить pnLibrary. pnRtp не будет запущен.", failure);
+        }
+    }
 
     @Override
     public void onEnable() {
+        if (!pnLibraryReady) {
+            getLogger().severe("pnLibrary не подготовлена: проверьте доступ к GitHub и ошибку загрузки выше.");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+        try {
+            pnRuntime = PnLibraryRuntime.connect(this);
+            pnRuntime.register();
+        } catch (Throwable failure) {
+            getLogger().log(Level.SEVERE, "pnLibrary не удалось включить или подключить к pnRtp.", failure);
+            if (pnRuntime != null) pnRuntime.close();
+            pnRuntime = null;
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+        getServer().getPluginManager().registerEvents(new PnLibraryLifecycleListener(this), this);
+
         saveDefaultConfig();
 
         rtpManager = new RTPManager(this);
@@ -32,10 +66,20 @@ public final class pnrtpPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new RTPListener(rtpManager, this), this);
 
         logStartupMessage();
+        pnRuntime.enabled();
     }
 
     @Override
     public void onDisable() {
+        PnLibraryRuntime closing = pnRuntime;
+        pnRuntime = null;
+        if (closing != null) {
+            try {
+                closing.close();
+            } catch (Exception exception) {
+                getLogger().log(Level.WARNING, "Не удалось корректно закрыть контекст pnLibrary", exception);
+            }
+        }
         getLogger().info("pnRtp отключён");
     }
 
