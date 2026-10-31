@@ -1,0 +1,107 @@
+package ru.privatenull.integration;
+
+import org.bukkit.plugin.java.JavaPlugin;
+import org.pnfolder.pnlibrary.api.diagnostics.DiagnosticConfiguration;
+import org.pnfolder.pnlibrary.api.diagnostics.DiagnosticContainer;
+import org.pnfolder.pnlibrary.api.plugin.ModuleContext;
+import org.pnfolder.pnlibrary.api.plugin.PluginRegistration;
+import org.pnfolder.pnlibrary.api.remote.PolicyErrorAction;
+import org.pnfolder.pnlibrary.api.remote.RemotePolicySettings;
+import org.pnfolder.pnlibrary.api.runtime.PnLibrary;
+import org.pnfolder.pnlibrary.api.runtime.PnLibraryIdentity;
+import org.pnfolder.pnlibrary.api.runtime.PnLibraryProvider;
+import org.pnfolder.pnlibrary.api.updates.UpdateChannel;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.logging.Level;
+
+/** Подключение pnRtp к общему рантайму pnLibrary; загружается только после его включения. */
+public final class PnLibraryRuntime {
+
+    public static final String MINIMUM_VERSION = "0.0.1-dev.6";
+    private static final String MODULE_ID = "pnrtp";
+    private static final String POLICY_SOURCE =
+            "https://raw.githubusercontent.com/pnFolder/pnlibrary-policy/main/.pnlibrary/policies/PnRtpPolicy.java";
+    private static final String UPDATE_OWNER = "pnFolder";
+    private static final String UPDATE_REPOSITORY = "pnRtp";
+
+    private final JavaPlugin owner;
+    private final PnLibrary runtime;
+    private PluginRegistration registration;
+    private ModuleContext module;
+
+    private PnLibraryRuntime(JavaPlugin owner, PnLibrary runtime) {
+        this.owner = owner;
+        this.runtime = runtime;
+    }
+
+    public static PnLibraryRuntime connect(JavaPlugin owner) {
+        PnLibrary runtime = PnLibraryProvider.get();
+        if (!runtime.isAtLeastVersion(MINIMUM_VERSION)) {
+            throw new IllegalStateException("pnRtp требует pnLibrary " + MINIMUM_VERSION
+                    + " или новее, установлена " + runtime.getVersion());
+        }
+        return new PnLibraryRuntime(owner, runtime);
+    }
+
+    public void register() {
+        if (registration != null) throw new IllegalStateException("pnRtp уже зарегистрирован в pnLibrary");
+        registration = runtime.getPlugins().register(owner);
+        try {
+            module = registration.registerModule(MODULE_ID, builder -> builder
+                    .diagnostics(owner.getDataFolder().toPath(), DiagnosticContainer.builder("pnrtp")
+                            .snapshot(this::diagnostics)
+                            .configuration(DiagnosticConfiguration.builder("config.yml").build())
+                            .build())
+                    // Недоступная политика (нет сети, JRE без компилятора) не останавливает плагин,
+                    // только явный запрет от самой политики.
+                    .remotePolicy(RemotePolicySettings.builder()
+                            .source(POLICY_SOURCE)
+                            .onError(PolicyErrorAction.KEEP_RUNNING)
+                            .support(PnLibraryIdentity.SUPPORT_URL)
+                            .build())
+                    .updates(UPDATE_OWNER, UPDATE_REPOSITORY, updater -> updater
+                            .channel(UpdateChannel.STABLE)
+                            .automaticDownload(false)
+                            .configurationBackup(owner.getDataFolder().toPath(), "config.yml")
+                            .artifact("(?i)^pnRtp-[0-9].*\\.jar$", 8)));
+        } catch (RuntimeException failure) {
+            closeRegistration();
+            throw failure;
+        }
+    }
+
+    public void enabled() {
+        if (module == null) return;
+        module.getLifecycle().enabled().show();
+    }
+
+    private Map<String, Object> diagnostics() {
+        Map<String, Object> report = new LinkedHashMap<>();
+        report.put("version", owner.getDescription().getVersion());
+        report.put("server", owner.getServer().getVersion());
+        report.put("minecraft", owner.getServer().getBukkitVersion());
+        report.put("java", System.getProperty("java.version"));
+        return report;
+    }
+
+    public void close() {
+        ModuleContext closing = module;
+        module = null;
+        if (closing != null && !closing.isClosed()) {
+            try {
+                closing.getLifecycle().disabled().show();
+            } catch (RuntimeException failure) {
+                owner.getLogger().log(Level.FINE, "Не удалось вывести сообщение об остановке pnRtp", failure);
+            }
+        }
+        closeRegistration();
+    }
+
+    private void closeRegistration() {
+        PluginRegistration closing = registration;
+        registration = null;
+        if (closing != null && !closing.isClosed()) closing.close();
+    }
+}
