@@ -9,8 +9,8 @@ import ru.privatenull.rtp.RTPTabCompleter;
 import org.pnfolder.pnlibrary.bukkit.bootstrap.PnLibraryBootstrap;
 import ru.privatenull.bootstrap.PnLibraryLifecycleListener;
 import ru.privatenull.integration.PnLibraryRuntime;
+import ru.privatenull.log.Log;
 
-import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,18 +29,18 @@ public final class pnrtpPlugin extends JavaPlugin {
 
     @Override
     public void onLoad() {
+        Log.fallback(getLogger());
         try {
             pnLibraryReady = PnLibraryBootstrap.ensureInstalled(this, PnLibraryRuntime.MINIMUM_VERSION);
         } catch (Throwable failure) {
-            getLogger().log(Level.SEVERE,
-                    "Не удалось автоматически подготовить pnLibrary. pnRtp не будет запущен.", failure);
+            Log.error("Не удалось автоматически подготовить pnLibrary. pnRtp не будет запущен.", failure);
         }
     }
 
     @Override
     public void onEnable() {
         if (!pnLibraryReady) {
-            getLogger().severe("pnLibrary не подготовлена: проверьте доступ к GitHub и ошибку загрузки выше.");
+            Log.error("pnLibrary не подготовлена: проверьте доступ к GitHub и ошибку загрузки выше.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -48,7 +48,7 @@ public final class pnrtpPlugin extends JavaPlugin {
             pnRuntime = PnLibraryRuntime.connect(this);
             pnRuntime.register();
         } catch (Throwable failure) {
-            getLogger().log(Level.SEVERE, "pnLibrary не удалось включить или подключить к pnRtp.", failure);
+            Log.error("pnLibrary не удалось включить или подключить к pnRtp.", failure);
             if (pnRuntime != null) pnRuntime.close();
             pnRuntime = null;
             getServer().getPluginManager().disablePlugin(this);
@@ -82,16 +82,16 @@ public final class pnrtpPlugin extends JavaPlugin {
                 closing.stopped();
                 closing.close();
             } catch (Exception exception) {
-                getLogger().log(Level.WARNING, "Не удалось корректно закрыть контекст pnLibrary", exception);
+                Log.warning("Не удалось корректно закрыть контекст pnLibrary", exception);
             }
         }
-        getLogger().info("pnRtp отключён");
+        Log.info("pnRtp отключён");
     }
 
     public void reloadPlugin() {
         reloadConfig();
         rtpManager.reloadConfig();
-        getLogger().info("pnRtp: конфигурация перезагружена.");
+        Log.info("pnRtp: конфигурация перезагружена.");
     }
 
     public void sendMessage(org.bukkit.command.CommandSender sender, String path, String... replacements) {
@@ -269,16 +269,16 @@ public final class pnrtpPlugin extends JavaPlugin {
 
     private void logStartupMessage() {
         logBanner();
-        getLogger().info("pnRtp v" + getDescription().getVersion() + " включён");
-        getLogger().info("Поддержка pnRtp: " + SUPPORT_DISCORD);
+        Log.info("pnRtp v" + getDescription().getVersion() + " включён");
+        Log.info("Поддержка pnRtp: " + SUPPORT_DISCORD);
     }
 
     private void logBanner() {
-        getLogger().info("██████╗░██████╗░██████╗░██████╗░██████╗░████████╗███████╗██████╗░");
-        getLogger().info("██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██╔══██╗");
-        getLogger().info("██████╔╝██████╔╝██████╔╝██████╔╝██████╔╝░░░██║░░░█████╗░░██████╔╝");
-        getLogger().info("██╔═══╝░██╔══██╗██╔══██╗██╔══██╗██╔══██╗░░░██║░░░██╔══╝░░██╔══██╗");
-        getLogger().info("██║░░░░░██║░░██║██║░░██║██║░░██║██║░░██║░░░██║░░░███████╗██║░░██║");
-        getLogger().info("╚═╝░░░░░╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝░░░╚═╝░░░╚══════╝╚═╝░░╚═╝");
+        Log.info("██████╗░██████╗░██████╗░██████╗░██████╗░████████╗███████╗██████╗░");
+        Log.info("██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝██╔══██╗");
+        Log.info("██████╔╝██████╔╝██████╔╝██████╔╝██████╔╝░░░██║░░░█████╗░░██████╔╝");
+        Log.info("██╔═══╝░██╔══██╗██╔══██╗██╔══██╗██╔══██╗░░░██║░░░██╔══╝░░██╔══██╗");
+        Log.info("██║░░░░░██║░░██║██║░░██║██║░░██║██║░░██║░░░██║░░░███████╗██║░░██║");
+        Log.info("╚═╝░░░░░╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝░░░╚═╝░░░╚══════╝╚═╝░░╚═╝");
     }
 }

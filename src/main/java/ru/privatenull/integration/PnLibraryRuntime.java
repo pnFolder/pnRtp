@@ -4,6 +4,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.pnfolder.pnlibrary.api.diagnostics.DiagnosticConfiguration;
 import org.pnfolder.pnlibrary.api.diagnostics.DiagnosticContainer;
 import org.pnfolder.pnlibrary.api.logging.MessageBox;
+import org.pnfolder.pnlibrary.api.logging.PnLogger;
 import org.pnfolder.pnlibrary.api.plugin.ModuleContext;
 import org.pnfolder.pnlibrary.api.plugin.PluginRegistration;
 import org.pnfolder.pnlibrary.api.remote.PolicyErrorAction;
@@ -12,6 +13,7 @@ import org.pnfolder.pnlibrary.api.runtime.PnLibrary;
 import org.pnfolder.pnlibrary.api.runtime.PnLibraryIdentity;
 import org.pnfolder.pnlibrary.api.runtime.PnLibraryProvider;
 import org.pnfolder.pnlibrary.api.updates.UpdateChannel;
+import ru.privatenull.log.Log;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -70,6 +72,7 @@ public final class PnLibraryRuntime {
                             .automaticDownload(false)
                             .configurationBackup(owner.getDataFolder().toPath(), "config.yml")
                             .artifact("(?i)^pnRtp-[0-9].*\\.jar$", 8)));
+            Log.attach(moduleSink(module.getLogger()));
         } catch (RuntimeException failure) {
             closeRegistration();
             throw failure;
@@ -110,6 +113,7 @@ public final class PnLibraryRuntime {
 
     public void close() {
         module = null;
+        Log.attach(null);
         closeRegistration();
     }
 
@@ -118,6 +122,30 @@ public final class PnLibraryRuntime {
                 .ok("Кулдауны", "сброшены")
                 .ok("Диагностика", "/pn debug pnRtp")
                 .show();
+    }
+
+    private static Log.Sink moduleSink(PnLogger logger) {
+        return new Log.Sink() {
+            @Override
+            public void info(String message) {
+                logger.info(message);
+            }
+
+            @Override
+            public void success(String message) {
+                logger.success(message);
+            }
+
+            @Override
+            public void warning(String message) {
+                logger.warning(message);
+            }
+
+            @Override
+            public void error(String message, Throwable error) {
+                logger.error(message, error);
+            }
+        };
     }
 
     private void closeRegistration() {
