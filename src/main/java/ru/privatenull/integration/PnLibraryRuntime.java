@@ -3,6 +3,7 @@ package ru.privatenull.integration;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.pnfolder.pnlibrary.api.diagnostics.DiagnosticConfiguration;
 import org.pnfolder.pnlibrary.api.diagnostics.DiagnosticContainer;
+import org.pnfolder.pnlibrary.api.logging.MessageBox;
 import org.pnfolder.pnlibrary.api.plugin.ModuleContext;
 import org.pnfolder.pnlibrary.api.plugin.PluginRegistration;
 import org.pnfolder.pnlibrary.api.remote.PolicyErrorAction;
@@ -75,9 +76,27 @@ public final class PnLibraryRuntime {
         }
     }
 
-    public void enabled() {
+    public void started(String targetWorld, boolean targetWorldLoaded, int modes,
+                        boolean effects, boolean titles, boolean worldBorderCheck) {
         if (module == null) return;
-        module.getLifecycle().enabled().show();
+        MessageBox block = module.getLifecycle().enabled()
+                .ok("Режимы", modes + " (near, default, far)");
+        block = targetWorldLoaded ? block.ok("Мир телепортации", targetWorld)
+                : block.warn("Мир телепортации", targetWorld + " не загружен");
+        block = effects ? block.ok("Эффекты", "частицы и звуки") : block.skip("Эффекты", "выключены");
+        block = titles ? block.ok("Титры", "включены") : block.skip("Титры", "выключены");
+        block = worldBorderCheck ? block.ok("Граница мира", "проверяется") : block.skip("Граница мира", "не проверяется");
+        block.ok("Диагностика", "/pndebug pnRtp").show();
+    }
+
+    public void stopped() {
+        ModuleContext closing = module;
+        if (closing == null || closing.isClosed()) return;
+        try {
+            stoppedOn(closing);
+        } catch (RuntimeException failure) {
+            owner.getLogger().log(Level.FINE, "Не удалось вывести сообщение об остановке pnRtp", failure);
+        }
     }
 
     private Map<String, Object> diagnostics() {
@@ -90,16 +109,15 @@ public final class PnLibraryRuntime {
     }
 
     public void close() {
-        ModuleContext closing = module;
         module = null;
-        if (closing != null && !closing.isClosed()) {
-            try {
-                closing.getLifecycle().disabled().show();
-            } catch (RuntimeException failure) {
-                owner.getLogger().log(Level.FINE, "Не удалось вывести сообщение об остановке pnRtp", failure);
-            }
-        }
         closeRegistration();
+    }
+
+    private void stoppedOn(ModuleContext closing) {
+        closing.getLifecycle().disabled()
+                .ok("Кулдауны", "сброшены")
+                .ok("Диагностика", "/pndebug pnRtp")
+                .show();
     }
 
     private void closeRegistration() {

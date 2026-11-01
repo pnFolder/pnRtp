@@ -66,7 +66,11 @@ public final class pnrtpPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new RTPListener(rtpManager, this), this);
 
         logStartupMessage();
-        pnRuntime.enabled();
+        String world = getConfig().getString("target-world", "world");
+        pnRuntime.started(world, getServer().getWorld(world) != null, 3,
+                getConfig().getBoolean("effects.enabled", true),
+                getConfig().getBoolean("titles.enabled", true),
+                isWorldBorderCheck());
     }
 
     @Override
@@ -75,6 +79,7 @@ public final class pnrtpPlugin extends JavaPlugin {
         pnRuntime = null;
         if (closing != null) {
             try {
+                closing.stopped();
                 closing.close();
             } catch (Exception exception) {
                 getLogger().log(Level.WARNING, "Не удалось корректно закрыть контекст pnLibrary", exception);
