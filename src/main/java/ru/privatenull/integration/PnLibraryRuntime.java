@@ -86,7 +86,7 @@ public final class PnLibraryRuntime {
         block = effects ? block.ok("Эффекты", "частицы и звуки") : block.skip("Эффекты", "выключены");
         block = titles ? block.ok("Титры", "включены") : block.skip("Титры", "выключены");
         block = worldBorderCheck ? block.ok("Граница мира", "проверяется") : block.skip("Граница мира", "не проверяется");
-        block.ok("Диагностика", "/pndebug pnRtp").show();
+        block.ok("Диагностика", "/pn debug pnRtp").show();
     }
 
     public void stopped() {
@@ -116,7 +116,7 @@ public final class PnLibraryRuntime {
     private void stoppedOn(ModuleContext closing) {
         closing.getLifecycle().disabled()
                 .ok("Кулдауны", "сброшены")
-                .ok("Диагностика", "/pndebug pnRtp")
+                .ok("Диагностика", "/pn debug pnRtp")
                 .show();
     }
 
