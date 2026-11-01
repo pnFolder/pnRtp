@@ -5,10 +5,6 @@ api-version: '1.16'
 author: privatenull
 website: https://github.com/pnFolder/pnRtp
 softdepend: [pnLibrary]
-commands:
-  rtp:
-    description: Случайная телепортация
-    usage: /rtp
 permissions:
   pnrtp.near:
     description: Доступ к /rtp near

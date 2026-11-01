@@ -79,6 +79,10 @@ public final class PnLibraryRuntime {
         }
     }
 
+    public ModuleContext module() {
+        return module;
+    }
+
     public void started(String targetWorld, boolean targetWorldLoaded, int modes,
                         boolean effects, boolean titles, boolean worldBorderCheck) {
         if (module == null) return;

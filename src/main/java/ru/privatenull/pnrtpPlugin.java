@@ -1,10 +1,10 @@
 package ru.privatenull;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import ru.privatenull.rtp.RTPCommandExecutor;
+import org.pnfolder.pnlibrary.api.plugin.ModuleContext;
+import ru.privatenull.rtp.RTPCommand;
 import ru.privatenull.rtp.RTPListener;
 import ru.privatenull.rtp.RTPManager;
-import ru.privatenull.rtp.RTPTabCompleter;
 
 import org.pnfolder.pnlibrary.bukkit.bootstrap.PnLibraryBootstrap;
 import ru.privatenull.bootstrap.PnLibraryLifecycleListener;
@@ -60,8 +60,7 @@ public final class pnrtpPlugin extends JavaPlugin {
 
         rtpManager = new RTPManager(this);
 
-        getCommand("rtp").setExecutor(new RTPCommandExecutor(this, rtpManager));
-        getCommand("rtp").setTabCompleter(new RTPTabCompleter());
+        pnRuntime.module().registerCommand(new RTPCommand(this, rtpManager).definition());
 
         getServer().getPluginManager().registerEvents(new RTPListener(rtpManager, this), this);
 
@@ -233,6 +232,10 @@ public final class pnrtpPlugin extends JavaPlugin {
         int fadeOut = getConfig().getInt("titles.fadeOut", 10);
         
         player.sendTitle(up, down, fadeIn, stay, fadeOut);
+    }
+
+    public ModuleContext module() {
+        return pnRuntime.module();
     }
 
     public int getRadius(String mode) {

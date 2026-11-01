@@ -8,24 +8,21 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.pnfolder.pnlibrary.api.tasks.TaskSpec;
 import ru.privatenull.pnrtpPlugin;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.Random;
-import java.util.UUID;
 
 public class RTPManager {
 
     private final pnrtpPlugin plugin;
-    private final Map<UUID, Long> cooldowns;
+    private static final String COOLDOWN_ACTION = "rtp";
     private final Random random;
 
     public RTPManager(pnrtpPlugin plugin) {
         this.plugin = plugin;
-        this.cooldowns = new HashMap<>();
         this.random = new Random();
     }
 
@@ -34,43 +31,20 @@ public class RTPManager {
     }
 
     public boolean isOnCooldown(Player player) {
-        UUID playerId = player.getUniqueId();
-        if (!cooldowns.containsKey(playerId)) {
-            return false;
-        }
-
-        long cooldownEnd = cooldowns.get(playerId);
-        long currentTime = System.currentTimeMillis();
-
-        if (currentTime >= cooldownEnd) {
-            cooldowns.remove(playerId);
-            return false;
-        }
-
-        return true;
+        return plugin.module().getCooldowns().has(player.getUniqueId(), COOLDOWN_ACTION);
     }
 
     public long getRemainingCooldown(Player player) {
-        UUID playerId = player.getUniqueId();
-        if (!cooldowns.containsKey(playerId)) {
-            return 0;
-        }
-
-        long cooldownEnd = cooldowns.get(playerId);
-        long currentTime = System.currentTimeMillis();
-        long remaining = cooldownEnd - currentTime;
-
-        return Math.max(0, remaining / 1000);
+        return plugin.module().getCooldowns().remaining(player.getUniqueId(), COOLDOWN_ACTION).toMillis() / 1000;
     }
 
     public void setCooldown(Player player, String mode) {
-        UUID playerId = player.getUniqueId();
-        int cooldownSeconds = plugin.getCooldown(mode);
-        cooldowns.put(playerId, System.currentTimeMillis() + (cooldownSeconds * 1000L));
+        plugin.module().getCooldowns().set(player.getUniqueId(), COOLDOWN_ACTION,
+                Duration.ofSeconds(plugin.getCooldown(mode)));
     }
 
     public void resetCooldown(Player player) {
-        cooldowns.remove(player.getUniqueId());
+        plugin.module().getCooldowns().reset(player.getUniqueId(), COOLDOWN_ACTION);
     }
 
     public void teleportPlayer(Player player, String mode) {
@@ -128,32 +102,32 @@ public class RTPManager {
 
         // Работа с блоками и чанками должна выполняться на серверном потоке.
         // Проверяем по одной позиции за тик, чтобы не создавать длинную задержку.
-        new BukkitRunnable() {
-            private static final int MAX_ATTEMPTS = 1000;
-            private int attempts;
-
-            @Override
-            public void run() {
-                if (!player.isOnline()) {
-                    cancel();
-                    return;
-                }
-
-                Location safeLocation = findSafeLocation(finalOrigin, mode, 1);
-                attempts++;
-
-                if (safeLocation == null) {
-                    if (attempts >= MAX_ATTEMPTS) {
-                        cancel();
-                        plugin.sendMessage(player, "no-safe-location");
+        final int maxAttempts = 1000;
+        final int[] attempts = {0};
+        plugin.module().getTasks().schedule(TaskSpec.builder()
+                .name("pnrtp-search")
+                .intervalTicks(1L)
+                .action(task -> {
+                    if (!player.isOnline()) {
+                        task.cancel();
+                        return;
                     }
-                    return;
-                }
 
-                cancel();
-                completeTeleport(player, mode, startLocation, safeLocation);
-            }
-        }.runTaskTimer(plugin, 0L, 1L);
+                    Location safeLocation = findSafeLocation(finalOrigin, mode, 1);
+                    attempts[0]++;
+
+                    if (safeLocation == null) {
+                        if (attempts[0] >= maxAttempts) {
+                            task.cancel();
+                            plugin.sendMessage(player, "no-safe-location");
+                        }
+                        return;
+                    }
+
+                    task.cancel();
+                    completeTeleport(player, mode, startLocation, safeLocation);
+                })
+                .build());
     }
 
     private void completeTeleport(Player player, String mode, Location startLocation, Location safeLocation) {
@@ -173,14 +147,15 @@ public class RTPManager {
             "%z%", String.valueOf(safeLocation.getBlockZ()));
         plugin.sendTitle(player);
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (player.isOnline()) {
-                    playEndEffects(player.getLocation());
-                }
-            }
-        }.runTaskLater(plugin, 3L);
+        plugin.module().getTasks().schedule(TaskSpec.builder()
+                .name("pnrtp-end-effects")
+                .delayTicks(3L)
+                .action(task -> {
+                    if (player.isOnline()) {
+                        playEndEffects(player.getLocation());
+                    }
+                })
+                .build());
     }
 
     private void playStartEffects(Location location) {
