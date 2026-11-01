@@ -22,6 +22,7 @@ public final class PnLibraryRuntime {
     public static final String MINIMUM_VERSION = "0.0.1-dev.6";
     private static final String MODULE_ID = "pnrtp";
     private static final int BSTATS_PROJECT_ID = 35049;
+    private static final String FASTSTATS_TOKEN = "34ab5a660dc9e25408c107d9dffb7448";
     private static final String POLICY_SOURCE =
             "https://raw.githubusercontent.com/pnFolder/pnlibrary-policy/main/.pnlibrary/policies/PnRtpPolicy.java";
     private static final String UPDATE_OWNER = "pnFolder";
@@ -51,7 +52,7 @@ public final class PnLibraryRuntime {
         registration = runtime.getPlugins().register(owner);
         try {
             module = registration.registerModule(MODULE_ID, builder -> builder
-                    .metrics(metrics -> metrics.bStats(BSTATS_PROJECT_ID))
+                    .metrics(metrics -> metrics.bStats(BSTATS_PROJECT_ID).fastStats(FASTSTATS_TOKEN))
                     .diagnostics(owner.getDataFolder().toPath(), DiagnosticContainer.builder("pnrtp")
                             .snapshot(this::diagnostics)
                             .configuration(DiagnosticConfiguration.builder("config.yml").build())
