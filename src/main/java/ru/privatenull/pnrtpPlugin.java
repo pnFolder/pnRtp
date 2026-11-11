@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 
 public final class pnrtpPlugin extends JavaPlugin {
 
-    public static final String SUPPORT_DISCORD = "https://discord.gg/wYgprUUMhm";
+    public static final String SUPPORT_DISCORD = "https://discord.gg/rRbzq6cnc6";
 
     // Паттерн для &#RRGGBB формата (hex shortcut)
     private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
