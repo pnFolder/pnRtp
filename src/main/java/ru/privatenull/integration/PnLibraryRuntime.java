@@ -22,7 +22,7 @@ import java.util.logging.Level;
 /** Подключение pnRtp к общему рантайму pnLibrary; загружается только после его включения. */
 public final class PnLibraryRuntime {
 
-    public static final String MINIMUM_VERSION = "0.0.1-dev.6";
+    public static final String MINIMUM_VERSION = "0.1.0-dev.6";
     private static final String MODULE_ID = "pnrtp";
     private static final int BSTATS_PROJECT_ID = 35049;
     private static final String FASTSTATS_TOKEN = "34ab5a660dc9e25408c107d9dffb7448";
