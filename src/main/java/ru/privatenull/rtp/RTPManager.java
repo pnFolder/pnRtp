@@ -8,7 +8,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.pnfolder.pnlibrary.api.tasks.TaskSpec;
+import org.pnfolder.pnlibrary.api.tasks.spec.TaskSpec;
 import ru.privatenull.pnrtpPlugin;
 
 import java.time.Duration;

@@ -3,12 +3,12 @@ package ru.privatenull.rtp;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.pnfolder.pnlibrary.api.commands.ArgumentType;
-import org.pnfolder.pnlibrary.api.commands.BadUsage;
+import org.pnfolder.pnlibrary.api.commands.definition.ArgumentType;
+import org.pnfolder.pnlibrary.api.commands.error.BadUsage;
 import org.pnfolder.pnlibrary.api.commands.CommandContext;
-import org.pnfolder.pnlibrary.api.commands.CommandDefinition;
-import org.pnfolder.pnlibrary.api.commands.NoPermission;
-import org.pnfolder.pnlibrary.api.commands.PlayerOnly;
+import org.pnfolder.pnlibrary.api.commands.definition.CommandDefinition;
+import org.pnfolder.pnlibrary.api.commands.error.NoPermission;
+import org.pnfolder.pnlibrary.api.commands.error.PlayerOnly;
 import ru.privatenull.pnrtpPlugin;
 
 import java.util.List;
@@ -71,7 +71,7 @@ public final class RTPCommand {
                 .build();
     }
 
-    private void mode(org.pnfolder.pnlibrary.api.commands.CommandNodeBuilder node, String mode) {
+    private void mode(org.pnfolder.pnlibrary.api.commands.definition.CommandNodeBuilder node, String mode) {
         node.permission("pnrtp." + mode).executes(context -> {
             Player player = player(context);
             if (player == null) return;
