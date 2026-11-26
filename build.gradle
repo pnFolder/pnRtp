@@ -15,7 +15,7 @@ repositories {
     }
 }
 
-def pnLibraryVersion = '0.1.0-dev.6'
+def pnLibraryVersion = '0.1.0-dev.7'
 
 dependencies {
     // Общий рантайм ставит bootstrap, зашейденный в jar; для компиляции нужен только публичный API.
