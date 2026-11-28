@@ -44,7 +44,7 @@ public final class RTPCommand {
                         }))
                 .literal("resetcd", node -> node
                         .permission("pnrtp.admin")
-                        .argument("player", ArgumentType.Companion.string(), argument -> argument
+                        .argument("player", ArgumentType.string(), argument -> argument
                                 .suggests(context -> {
                                     String prefix = context.getCurrentInput().toLowerCase();
                                     return Bukkit.getOnlinePlayers().stream()
@@ -90,6 +90,6 @@ public final class RTPCommand {
     }
 
     private static Player player(CommandContext context) {
-        return Bukkit.getPlayer(UUID.fromString(context.getSender().getId()));
+        return Bukkit.getPlayer(context.getSender().get(net.kyori.adventure.identity.Identity.UUID).orElseThrow(IllegalArgumentException::new));
     }
 }

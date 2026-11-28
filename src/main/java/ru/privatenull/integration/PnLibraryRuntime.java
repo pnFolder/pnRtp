@@ -7,12 +7,10 @@ import org.pnfolder.pnlibrary.api.logging.MessageBox;
 import org.pnfolder.pnlibrary.api.logging.PnLogger;
 import org.pnfolder.pnlibrary.api.plugin.ModuleContext;
 import org.pnfolder.pnlibrary.api.plugin.PluginRegistration;
-import org.pnfolder.pnlibrary.api.remote.PolicyErrorAction;
+import org.pnfolder.pnlibrary.api.remote.result.PolicyErrorAction;
 import org.pnfolder.pnlibrary.api.remote.RemotePolicySettings;
 import org.pnfolder.pnlibrary.api.runtime.PnLibrary;
-import org.pnfolder.pnlibrary.api.runtime.PnLibraryIdentity;
 import org.pnfolder.pnlibrary.api.runtime.PnLibraryProvider;
-import org.pnfolder.pnlibrary.api.updates.product.UpdateChannel;
 import ru.privatenull.log.Log;
 
 import java.util.LinkedHashMap;
@@ -22,7 +20,7 @@ import java.util.logging.Level;
 /** Подключение pnRtp к общему рантайму pnLibrary; загружается только после его включения. */
 public final class PnLibraryRuntime {
 
-    public static final String MINIMUM_VERSION = "0.1.0-dev.6";
+    public static final String MINIMUM_VERSION = "0.1.0-dev.7";
     private static final String MODULE_ID = "pnrtp";
     private static final int BSTATS_PROJECT_ID = 35049;
     private static final String FASTSTATS_TOKEN = "34ab5a660dc9e25408c107d9dffb7448";
@@ -65,11 +63,8 @@ public final class PnLibraryRuntime {
                     .remotePolicy(RemotePolicySettings.builder()
                             .source(POLICY_SOURCE)
                             .onError(PolicyErrorAction.KEEP_RUNNING)
-                            .support(PnLibraryIdentity.SUPPORT_URL)
                             .build())
                     .updates(UPDATE_OWNER, UPDATE_REPOSITORY, updater -> updater
-                            .channel(UpdateChannel.STABLE)
-                            .automaticDownload(false)
                             .configurationBackup(owner.getDataFolder().toPath(), "config.yml")
                             .artifact("(?i)^pnRtp-[0-9].*\\.jar$", 8)));
             Log.attach(moduleSink(module.getLogger()));
